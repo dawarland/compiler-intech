@@ -125,6 +125,12 @@ ast_t *ast_new_return (ast_t *expr)
   return ast;
 }
 
+ast_t *ast_new_null(){
+  ast_t * ast = malloc(sizeof(ast_t));
+  ast->type = AST_NULL;
+  return ast;
+}
+
 char *ast_get_var_type (ast_t *ast) {
   if (ast->type != AST_VARIABLE) return "";
   if (ast->var.type == AST_INTEGER) {
@@ -164,6 +170,34 @@ ast_list_t *ast_list_add (ast_list_t **list, ast_t *elem)
   return *list;
 }
 
+int is_priority(ast_t *a1, ast_t *a2){
+  switch(a1->type)
+    {
+      case AST_BINARY:
+        switch(a1->binary.op){
+            case AST_BIN_PLUS:
+                if( a2->type == AST_NULL) return -1;
+                else return 1;
+            case AST_BIN_MINUS:
+                if( a2->type == AST_NULL) return -1;
+                else return 1;
+            case AST_BIN_MULT:
+                if(a2->type == AST_BINARY && a2->binary.op == AST_BIN_MULT) return 1;
+                else if( a2->type == AST_INTEGER) return 1;
+                else return -1;
+            default:
+              return 0;
+        }
+        case AST_INTEGER:
+            assert(a2->type != AST_INTEGER);
+            return -1;
+        case AST_NULL:
+            if( a2->type == AST_NULL) return 0;
+            else return 1;
+        default:
+            return 0;
+    }
+}
 int ast_binary_priority (ast_t *ast)
 {
   if (ast == NULL) return 0;

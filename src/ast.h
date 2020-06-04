@@ -15,7 +15,8 @@ typedef enum {
   AST_DECLARATION,
   AST_ASSIGNMENT,
   AST_COMPOUND_STATEMENT,
-  AST_RETURN
+  AST_RETURN,
+  AST_NULL,
 } ast_node_type_e;
 
 typedef enum {
@@ -104,8 +105,10 @@ ast_t *ast_new_declaration (ast_t *lvalue, ast_t *rvalue);
 ast_t *ast_new_condition (ast_t *condition, ast_t *valid, ast_t *invalid);
 ast_t *ast_new_loop (ast_t *condition, ast_t *stmt);
 ast_t *ast_new_return (ast_t *expr);
+ast_t *ast_new_null();
 
 // int ast_binary_priority (ast_t *ast);
+int is_priority(ast_t *a1, ast_t *a2);
 ast_list_t *ast_list_new_node (ast_t *elem);
 ast_list_t *ast_list_add (ast_list_t **list, ast_t *elem);
 char *ast_get_var_type (ast_t *ast);
