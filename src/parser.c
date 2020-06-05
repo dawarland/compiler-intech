@@ -90,61 +90,69 @@ ast_t *convert_to_binary_or_integer_ast_t(char *c){
   else if(*c == '+') return ast_new_binary(AST_BIN_PLUS, NULL, NULL);
   else if(*c == '-') return ast_new_binary(AST_BIN_MINUS, NULL, NULL);
   else if(*c == '*') return ast_new_binary(AST_BIN_MULT, NULL, NULL);
-  else return ast_new_null();
+  else return NULL;
 }
 ast_t *internal_init_convert_tree(mystack_t *queue){
   if (stack_isempty(*queue)) return NULL;
   //print_stack((*queue));printf(" : la queue que j'ai passé en param\n");
   ast_t *curr = stack_pop(queue);
-  if(curr->type ==  AST_BIN_PLUS || curr->type ==  AST_BIN_MINUS || curr->type ==  AST_BIN_MULT) {
-    if(!curr->binary.left)curr->binary.left = internal_init_convert_tree(queue);
-    if(!curr->binary.right)curr->binary.right = internal_init_convert_tree(queue);
+  printf("**** avaant ******\n");
+  ast_print(curr);
+  if(curr->type == AST_BINARY ) {
+    if(!curr->binary.right) curr->binary.right = internal_init_convert_tree(queue);
+    if(!curr->binary.left) curr->binary.left = internal_init_convert_tree(queue);
   }
+  printf("**** apres ******\n");
+  ast_print(curr);
   return curr;
 }
 ast_t *init_convert_tree(mystack_t *chaine){
   return internal_init_convert_tree(chaine);
 }
+/**
+ * Dans mon algo, pour reconnaitre une variable,
+ * on part du principe que le nom de la variable ne comporte qu'une lettre.
+ * Cela doit fonctionner une fois l'ajout des symbol dans la table finalisé
+ */
 ast_t *create_ast (char *items, size_t size){
   if (size == 0) return NULL;
   size_t i = 0;
-  ast_t *last = ast_new_null();
-  /*mystack_t *stack = malloc(sizeof(mystack_t));
-  mystack_t *ordered = malloc(sizeof(mystack_t));*/
-  mystack_t stack = malloc(sizeof(mystack_t));
-  mystack_t ordered = malloc(sizeof(mystack_t));
+  ast_t *last = NULL;
+  mystack_t stack = NULL;
+  mystack_t ordered = NULL;
   mystack_t *pstack = &stack,
           *pordered = &ordered;
-  stack_push(pstack, ast_new_null());
-  stack_push(pstack, ast_new_integer(6));
-
-  while (stack_pop(stack) != '\0' || i < size) {
-    ast_t *curr = convert_to_binary_or_integer_ast_t(&items[i]);
-    ast_print(curr);
-    if (is_priority( curr, stack ) <= 0) {
-      printf("stack (%d) est prioritaire a item (%d)\n", curr->type, stack->data);
+  stack_push(pstack, NULL);
+  while (stack_top(stack) != NULL || i < size) {
+    symbol_t *sym = sym_search(*pglobal_table, &items[i]);
+    ast_t *curr = NULL;
+    if(sym == NULL) {
+      curr = convert_to_binary_or_integer_ast_t(&items[i]);
+    }else{
+      curr = sym->attributes;
+    }
+    if ( ast_binary_priority( stack_top(stack) ) < ast_binary_priority(curr)){
       stack_push(pstack, curr);
       i++;
     } else {
-      //printf("stack (%d) n'est pas prioritaire a item (%d)\n", curr->type, stack);
       do {
         last = stack_pop(&stack);
         stack_push(pordered, last);
-        
-      } while (stack_isempty(stack)!=0 && is_priority( last ,stack_pop(stack)) != -1);
+      } while (stack_isempty(stack)!=0 && ast_binary_priority(stack_top(stack)) > ast_binary_priority(last) );
     }
   }
-  printf("i vaut : %d\n", i);
-  
   return init_convert_tree(pordered);
 }
 
+/**
+ * a = 2;
+ */
 ast_t *parse_expression (buffer_t *buffer)
 {
   printf("start parse expression\n");
   buf_skipblank(buffer);
   char items[100];
-  int i=0;
+  size_t i=0;
   char next = buf_getchar(buffer);
   do {
     items[i]=next;
@@ -152,11 +160,37 @@ ast_t *parse_expression (buffer_t *buffer)
     next = buf_getchar(buffer);
     i++;
   } while (next != ';');
-  printf("chaine a traiter : %s de taille %d\n", items, i);
-
+  printf("chaine a traiter : %s de taille %zu\n", items, i);
   return create_ast(items, i);
 }
 
+ast_t *parse_assignment (buffer_t *buffer)
+{
+  printf("start parse affectation\n");
+  buf_skipblank(buffer);
+  char *var_name = lexer_getalphanum(buffer);
+  if (var_name == NULL) {
+    printf("Expected a variable name. exiting.\n");
+    exit(1);
+  }
+  symbol_t *curr = sym_search(*pglobal_table, var_name);
+  if(curr == NULL) {
+    printf("variable doesn't exist. exiting.\n");
+    exit(1);
+  }
+  ast_t *var = curr->attributes ;
+
+  buf_skipblank(buffer);
+  char next = buf_getchar(buffer);
+  if (next == '=') {
+    ast_t *expression = parse_expression(buffer);
+    sym_remove (pglobal_table, curr);
+    return ast_new_declaration(var, expression);
+  }
+  printf("Expected either a ';' or a '='. exiting.\n");
+  buf_print(buffer);
+  exit(1);
+}
 /**
  * entier a;
  * entier a = 2;
@@ -194,6 +228,9 @@ ast_t *parse_statement (buffer_t *buffer)
   if (parse_is_type(lexem)) {
     // ceci est une déclaration de variable
     return parse_declaration(buffer);
+  }else{
+    // ceci est une affectation de variable
+    return parse_assignment(buffer);
   }
   // TODO:
   return NULL;
