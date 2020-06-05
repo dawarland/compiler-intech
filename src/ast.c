@@ -171,6 +171,12 @@ ast_list_t *ast_list_add (ast_list_t **list, ast_t *elem)
 }
 
 int is_priority(ast_t *a1, ast_t *a2){
+
+  printf("a1\n");
+  ast_print(a1);
+  printf("a2\n");
+  ast_print(a2);
+
   switch(a1->type)
     {
       case AST_BINARY:

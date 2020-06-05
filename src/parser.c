@@ -111,28 +111,30 @@ ast_t *create_ast (char *items, size_t size){
   ast_t *last = ast_new_null();
   /*mystack_t *stack = malloc(sizeof(mystack_t));
   mystack_t *ordered = malloc(sizeof(mystack_t));*/
-  mystack_t *stack = malloc(sizeof(mystack_t));
-  mystack_t *ordered = malloc(sizeof(mystack_t));
-  mystack_t **pstack = &stack,
-          **pordered = &ordered;
+  mystack_t stack = malloc(sizeof(mystack_t));
+  mystack_t ordered = malloc(sizeof(mystack_t));
+  mystack_t *pstack = &stack,
+          *pordered = &ordered;
   stack_push(pstack, ast_new_null());
-  
+  stack_push(pstack, ast_new_integer(6));
+
   while (stack_pop(stack) != '\0' || i < size) {
     ast_t *curr = convert_to_binary_or_integer_ast_t(&items[i]);
     ast_print(curr);
-    if (is_priority( curr,stack_pop(stack)) <= 0) {
-      //printf("stack (%c) est prioritaire a item (%c)\n", stack_char_top(stack), items[i]);
+    if (is_priority( curr, stack ) <= 0) {
+      printf("stack (%d) est prioritaire a item (%d)\n", curr->type, stack->data);
       stack_push(pstack, curr);
       i++;
     } else {
-      //printf("stack (%c) n'est pas prioritaire a item (%c)\n", stack_char_top(stack), items[i]);
+      //printf("stack (%d) n'est pas prioritaire a item (%d)\n", curr->type, stack);
       do {
-        last = stack_pop(stack);
+        last = stack_pop(&stack);
         stack_push(pordered, last);
         
-      } while (stack_isempty(*stack)!=0 && is_priority( last ,stack_pop(stack)) != -1);
+      } while (stack_isempty(stack)!=0 && is_priority( last ,stack_pop(stack)) != -1);
     }
   }
+  printf("i vaut : %d\n", i);
   
   return init_convert_tree(pordered);
 }
